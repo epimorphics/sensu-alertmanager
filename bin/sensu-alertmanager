@@ -1,13 +1,98 @@
-#! /usr/bin/perl
-use strict;
-use warnings;
-use 5.010;
- 
-my $filename = '/tmp/sensu-alertmanager.txt';
-open(my $fh, '>>', $filename) or die "Could not open file '$filename' $!";
-while(<>){
-  print $fh $_;
-}
-print $fh "---";
-close $fh;
+#! /usr/bin/python3
 
+# To debug create a new sensu handler configured a tcp port 31337
+# on host the host start nc -l
+# pipe the output from this to stdin of this script.
+
+import argparse
+import datetime
+import json
+import requests
+import sys
+
+# Initiate the parser (https://docs.python.org/3/library/argparse.html)
+parser = argparse.ArgumentParser()
+parser.add_argument("-A", "--alertmanager", dest="alertmanager", help="Alertrmanager", action="store", default="http://alertmanager:9093/api/v1/alerts")
+parser.add_argument("-V", "--version", action='version', version='%(prog)s 1.0')
+
+# Read arguments from the command line
+args = parser.parse_args()
+
+def read_stdin():
+  try:
+    return json.load(sys.stdin)
+  except:
+    print('Failed to parse input as json')
+    exit
+
+
+def endsAt(check):
+  if check['state'] == 'passing':
+    return check['executed']
+  else:
+    return (check['executed'] + check['interval'] + 10 )
+
+
+def rfc3339(epoch):
+  return datetime.datetime.fromtimestamp(epoch).isoformat('T') + 'Z'
+
+
+def annotate(entity, check):
+  md = check['metadata']
+  a = {}
+  a.update(md.get('annotations'))
+  a['message'] = check['output'].rstrip()
+  if 'sensu' in a.keys():
+    a['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(a['sensu'], md['namespace'], entity, md['name'])
+  return a
+
+
+def label(entity, check):
+  status = [ 'OK', 'WARNING', 'CRITICAL', 'UNKNOWN' ]
+
+  md = check['metadata']
+  l = {}
+  l.update(md.get('labels'))
+  l['entity'] = entity
+  l['alertname'] = 'Sensu Alert: ' + md['name']
+  l['namespace'] = md['namespace']
+  l['status'] = check['state']
+
+  try:
+    l['severity'] = status[check['status']].title()
+  except:
+    l['severity'] = 'Undefined'
+
+  return l
+
+
+def entity(data):
+  if data['entity']['entity_class'] == 'proxy':
+    return data['check']['proxy_entity_name']
+  return data['entity']['system']['hostname']
+
+
+def post(response):
+  alert = []
+  alert.append(response)
+
+# print(json.dumps(alert))
+
+  try:
+    requests.post(args.alertmanager, json = alert)
+  except:
+    print("Failed to post to {}".format(args.alertmanager))
+
+
+data = {}
+data = read_stdin()
+
+entity_name = entity(data)
+check = data['check']
+
+response = {}
+response['endsAt'] = rfc3339(endsAt(check))
+response['labels'] = label(entity_name, check)
+response['annotations'] = annotate(entity_name, check)
+
+post(response)
