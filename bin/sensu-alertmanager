@@ -37,13 +37,13 @@ def rfc3339(epoch):
   return datetime.datetime.fromtimestamp(epoch).isoformat('T') + 'Z'
 
 
-def annotate(entity, check):
+def annotate(entity_name, check, entity):
   md = check['metadata']
-  a = {}
-  a.update(md.get('annotations'))
+  a = entity.get('metadata', {}).get('annotations', {})
+  a.update(md.get('annotations', {}))
   a['message'] = check['output'].rstrip()
   if 'sensu' in a.keys():
-    a['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(a['sensu'], md['namespace'], entity, md['name'])
+    a['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(a['sensu'], md['namespace'], entity_name, md['name'])
   return a
 
 
@@ -51,8 +51,7 @@ def label(entity, check):
   status = [ 'OK', 'WARNING', 'CRITICAL', 'UNKNOWN' ]
 
   md = check['metadata']
-  l = {}
-  l.update(md.get('labels'))
+  l = md.get('labels', {})
   l['entity'] = entity
   l['alertname'] = 'Sensu Alert: ' + md['name']
   l['namespace'] = md['namespace']
@@ -69,7 +68,7 @@ def label(entity, check):
 def entity(data):
   if data['entity']['entity_class'] == 'proxy':
     return data['check']['proxy_entity_name']
-  return data['entity']['system']['hostname']
+  return data['entity']['system']['hostname'].split('.')[0]
 
 
 def post(response):
@@ -86,13 +85,13 @@ def post(response):
 
 data = {}
 data = read_stdin()
+#print("Data:{}".format(json.dumps(data)))
 
 entity_name = entity(data)
-check = data['check']
 
 response = {}
-response['endsAt'] = rfc3339(endsAt(check))
-response['labels'] = label(entity_name, check)
-response['annotations'] = annotate(entity_name, check)
+response['endsAt'] = rfc3339(endsAt(data['check']))
+response['labels'] = label(entity_name, data['check'])
+response['annotations'] = annotate(entity_name, data['check'], data['entity'])
 
 post(response)
