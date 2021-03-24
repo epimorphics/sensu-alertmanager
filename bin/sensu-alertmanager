@@ -42,8 +42,9 @@ def annotate(entity_name, check, entity):
   a = entity.get('metadata', {}).get('annotations', {})
   a.update(md.get('annotations', {}))
   a['message'] = check['output'].rstrip()
-  if 'sensu' in a.keys():
-    a['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(a['sensu'], md['namespace'], entity_name, md['name'])
+  a['occurrences'] = str(check['occurrences'])
+  if check['last_ok']:
+    a['since'] = rfc3339(check['last_ok'])
   return a
 
 
@@ -58,7 +59,7 @@ def label(entity, check):
   l['status'] = check['state']
 
   try:
-    l['severity'] = status[check['status']].title()
+    l['severity'] = status[check['status']].lower()
   except:
     l['severity'] = 'Undefined'
 
@@ -75,10 +76,10 @@ def post(response):
   alert = []
   alert.append(response)
 
-# print(json.dumps(alert))
 
   try:
     requests.post(args.alertmanager, json = alert)
+    print("POST:{}".format(json.dumps(alert)))
   except:
     print("Failed to post to {}".format(args.alertmanager))
 
@@ -93,5 +94,9 @@ response = {}
 response['endsAt'] = rfc3339(endsAt(data['check']))
 response['labels'] = label(entity_name, data['check'])
 response['annotations'] = annotate(entity_name, data['check'], data['entity'])
+response['annotations']['sequence'] = str(data['sequence'])
+if 'sensu' in response['annotations'].keys():
+  md = data['check']['metadata']
+  response['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(response['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
 
 post(response)
