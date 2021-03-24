@@ -87,16 +87,18 @@ def post(response):
 data = {}
 data = read_stdin()
 #print("Data:{}".format(json.dumps(data)))
+md = data['check']['metadata']
 
-entity_name = entity(data)
+# If we don't do this we get Resolved AM event when Warning becomes Critical
+if not (md['name'] == 'keepalive' and data['check']['status'] < 2):
+  entity_name = entity(data)
 
-response = {}
-response['endsAt'] = rfc3339(endsAt(data['check']))
-response['labels'] = label(entity_name, data['check'])
-response['annotations'] = annotate(entity_name, data['check'], data['entity'])
-response['annotations']['sequence'] = str(data['sequence'])
-if 'sensu' in response['annotations'].keys():
-  md = data['check']['metadata']
-  response['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(response['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
+  response = {}
+  response['endsAt'] = rfc3339(endsAt(data['check']))
+  response['labels'] = label(entity_name, data['check'])
+  response['annotations'] = annotate(entity_name, data['check'], data['entity'])
+  response['annotations']['sequence'] = str(data['sequence'])
+  if 'sensu' in response['annotations'].keys():
+    response['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(response['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
 
-post(response)
+  post(response)
