@@ -13,6 +13,8 @@ import sys
 # Initiate the parser (https://docs.python.org/3/library/argparse.html)
 parser = argparse.ArgumentParser()
 parser.add_argument("-A", "--alertmanager", dest="alertmanager", help="Alertrmanager", action="store", default="http://alertmanager:9093/api/v1/alerts")
+parser.add_argument("-t", "--timeout", dest="timeout", help="timeout", action="store", default=3, type=int)
+parser.add_argument("-r", "--retries", dest="retries", help="retries", action="store", default=2, type=int)
 parser.add_argument("-V", "--version", action='version', version='%(prog)s 1.0')
 
 # Read arguments from the command line
@@ -76,11 +78,14 @@ def post(response, retry=0):
   alert = []
   alert.append(response)
 
+# if retry:
+#   print("Retry: {}".format(retry))
+
   try:
-    requests.post(args.alertmanager, json = alert, timeout = 3)
+    requests.post(args.alertmanager, json = alert, timeout = args.timeout)
     print("POST:{}".format(json.dumps(alert)))
   except requests.Timeout:
-    if (retry < 5):
+    if (retry < args.retries):
       post(response, retry+1)
     else:
       print("Timeout posting to {}".format(args.alertmanager))
