@@ -72,16 +72,20 @@ def entity(data):
   return data['entity']['system']['hostname'].split('.')[0]
 
 
-def post(response):
+def post(response, retry=0):
   alert = []
   alert.append(response)
 
-
   try:
-    requests.post(args.alertmanager, json = alert)
+    requests.post(args.alertmanager, json = alert, timeout = 3)
     print("POST:{}".format(json.dumps(alert)))
-  except:
-    print("Failed to post to {}".format(args.alertmanager))
+  except requests.Timeout:
+    if (retry < 5):
+      post(response, retry+1)
+    else:
+      print("Timeout posting to {}".format(args.alertmanager))
+  except requests.ConnectionError as e:
+    print("Failed to post to {}: {}".format(args.alertmanager, e))
 
 
 data = {}

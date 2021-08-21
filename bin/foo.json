@@ -1,0 +1,27 @@
+{
+  "entity": {
+    "entity_class": "system",
+    "system": {
+      "hostname": "foo"
+    }
+  },
+  "sequence": 0,
+  "check": {
+    "executed": 0,
+    "last_ok": 0,
+    "state": "passing",
+    "output": "Output\n",
+    "occurrences": 1,
+    "metadata": {
+      "name": "Name",
+      "namespace": "Namespace",
+      "check-http": {
+      "command": "check-http.rb -u https://google.com",
+      "subscribers": [
+        "webservers"
+      ],
+      "interval": 60
+      }
+    }
+  }
+}
