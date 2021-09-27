@@ -34,4 +34,4 @@ jobs:
         run: make image
 
       - name: Publish
-        run: make push
+        run: make publish
