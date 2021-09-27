@@ -95,11 +95,11 @@ def post(msg, retry=0):
       post(msg, retry+1)
     else:
       log("Timeout posting to {}".format(args.alertmanager), alert)
-      metrics(state='timeout').inc()
+      metrics.labels(state='timeout').inc()
     return
   except requests.ConnectionError as e:
     log("Failed to post to {}: {}".format(args.alertmanager, e), alert)
-    metrics(state='failure').inc()
+    metrics.labels(state='failure').inc()
     return
 
   if retry:
@@ -136,7 +136,7 @@ def threaded_client(connection):
     except:
       log('Failed to decode data frame. <{}>'.format(frame))
       connection.close()
-      metrics(state='error').inc()
+      metrics.labels(state='error').inc()
       return
   connection.close()
 
