@@ -1,21 +1,15 @@
-NAME?=sensu-alertmanager
-VERSION?=SNAPSHOT
-ROOT=${NAME}_${VERSION}
-TGZ=${ROOT}_linux_amd64.tar.gz
-SHA=${ROOT}_sha512-checksums.txt
+.PHONY:	default image publish
 
-all: clean assets
+REPO = 293385631482.dkr.ecr.eu-west-1.amazonaws.com
+STORE = epimorphics
+IMAGE = sensu-alertmanager
+TAG?= $(shell if git describe > /dev/null 2>&1 ; then   git describe; else   git rev-parse --short HEAD; fi)
 
-assets: sha
+default: image
+all: publish
 
-sha: ${SHA}
-	
-${TGZ}:
-	@echo "Creating ${TGZ} ..."
-	@tar zcf ${TGZ} bin
+image:
+	@docker build --tag ${REPO}/${STORE}/${IMAGE}:${TAG} .
 
-${SHA}: ${TGZ}
-	@sha512sum ${TGZ} | tee ${SHA}
-
-clean:
-	@rm -f ${TGZ} ${SHA}
+publish: image
+	@docker push ${REPO}/${STORE}/${IMAGE}:${TAG}

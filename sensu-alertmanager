@@ -1,0 +1,188 @@
+#! /usr/bin/python3
+
+# To debug create a new sensu handler configured a tcp port 31337
+# on host the host start nc -l
+# pipe the output from this to stdin of this script.
+
+import argparse
+import datetime
+import json
+import os
+import requests
+import signal
+import socket
+import sys
+import time
+
+from _thread import *
+from prometheus_client import start_http_server, Counter
+
+
+def log(msg, alert=None):
+  event = {}
+  event['ts'] = rfc3339(time.time())
+  event['text'] = msg
+  if alert:
+    event['alert'] = json.dumps(alert)
+  print(json.dumps(event))
+
+def terminateProcess(signalNumber, frame):
+  log('Received signal {}.'.format(signalNumber))
+  ServerSocket.close()
+  log('Socket closed. Terminating.')
+  sys.exit()
+
+
+def endsAt(check):
+  if check['state'] == 'passing':
+    return check['executed']
+  else:
+    return (check['executed'] + check['interval'] + 10 )
+
+
+def rfc3339(epoch):
+  return datetime.datetime.fromtimestamp(epoch).isoformat('T') + 'Z'
+
+
+def annotate(entity_name, check, entity):
+  md = check['metadata']
+  a = entity.get('metadata', {}).get('annotations', {})
+  a.update(md.get('annotations', {}))
+  a['message'] = check['output'].rstrip()
+  a['occurrences'] = str(check['occurrences'])
+  if check['last_ok']:
+    a['since'] = rfc3339(check['last_ok'])
+  return a
+
+
+def label(entity, check):
+  status = [ 'OK', 'WARNING', 'CRITICAL', 'UNKNOWN' ]
+
+  md = check['metadata']
+  l = md.get('labels', {})
+  l['entity'] = entity
+  l['alertname'] = 'Sensu Alert: ' + md['name']
+  l['namespace'] = md['namespace']
+  l['status'] = check['state']
+
+  try:
+    l['severity'] = status[check['status']].lower()
+  except:
+    l['severity'] = 'Undefined'
+
+  return l
+
+
+def entity(data):
+  if data['entity']['entity_class'] == 'proxy':
+    return data['check']['proxy_entity_name']
+  return data['entity']['system']['hostname'].split('.')[0]
+
+
+def post(msg, retry=0):
+  alert = []
+  alert.append(msg)
+
+  if retry:
+    log("Retry: {}".format(retry))
+
+  try:
+#   log("Forwarding to {}".format(args.alertmanager), alert)
+    r = requests.post(args.alertmanager, json = alert, timeout = args.timeout)
+#   log(r.text)
+  except requests.Timeout:
+    if (retry < args.retries):
+      post(msg, retry+1)
+    else:
+      log("Timeout posting to {}".format(args.alertmanager), alert)
+      metrics(state='timeout').inc()
+    return
+  except requests.ConnectionError as e:
+    log("Failed to post to {}: {}".format(args.alertmanager, e), alert)
+    metrics(state='failure').inc()
+    return
+
+  if retry:
+    metrics.labels(state='retry').inc()
+  else:
+    metrics.labels(state='success').inc()
+
+
+def process(data):
+  #print("Data:{}".format(json.dumps(data)))
+  md = data['check']['metadata']
+
+  entity_name = entity(data)
+
+  msg = {}
+  msg['endsAt'] = rfc3339(endsAt(data['check']))
+  msg['labels'] = label(entity_name, data['check'])
+  msg['annotations'] = annotate(entity_name, data['check'], data['entity'])
+  msg['annotations']['sequence'] = str(data['sequence'])
+  if 'sensu' in msg['annotations'].keys():
+    msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
+
+  post(msg)
+
+
+def threaded_client(connection):
+  alert = ""
+  while True:
+    frame = connection.recv(4096)
+    if not frame:
+      break
+    try:
+      alert += frame.decode("utf-8")
+    except:
+      log('Failed to decode data frame. <{}>'.format(frame))
+      connection.close()
+      metrics(state='error').inc()
+      return
+  connection.close()
+
+  try:
+    process(json.loads(alert))
+  except:
+    log('Failed to process alert:', alert)
+
+
+def start_server(port):
+  try:
+    ServerSocket.bind(('0.0.0.0', port))
+  except socket.error as e:
+    log(str(e))
+
+  ServerSocket.listen(5)
+
+  while True:
+    Client, address = ServerSocket.accept()
+#   log('Connection from : ' + address[0] + ':' + str(address[1]))
+    start_new_thread(threaded_client, (Client, ))
+  ServerSocket.close()
+
+
+if __name__ == "__main__":
+  # Initiate the parser (https://docs.python.org/3/library/argparse.html)
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-A", "--alertmanager", dest="alertmanager", help="Alertrmanager", action="store", default="http://alertmanager:9093/api/v1/alerts")
+  parser.add_argument("-t", "--timeout", dest="timeout", help="timeout", action="store", default=3, type=int)
+  parser.add_argument("-p", "--port", dest="port", help="port", action="store", default=9898, type=int)
+  parser.add_argument("-r", "--retries", dest="retries", help="retries", action="store", default=2, type=int)
+  parser.add_argument("-V", "--version", action='version', version='%(prog)s 1.0')
+
+  metrics = Counter("sensu_alert", "Sensu Alert Connections", ['state'])
+
+  # register the signals to be caught
+  signal.signal(signal.SIGINT, terminateProcess)
+  signal.signal(signal.SIGQUIT, terminateProcess)
+  signal.signal(signal.SIGTERM, terminateProcess)
+  # start prometheus metrics
+  start_http_server(9899)
+
+  # Read arguments from the command line
+  args = parser.parse_args()
+
+  log("Starting server on port {}...".format(args.port))
+  ServerSocket = socket.socket()
+  start_server(args.port)
+
