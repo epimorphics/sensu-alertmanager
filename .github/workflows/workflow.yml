@@ -6,9 +6,8 @@ name: CI
 # events but only for the main branch
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -34,4 +33,4 @@ jobs:
         run: make image
 
       - name: Publish
-        run: make publish
+        run: TAG=`git describe --tags` make publish
