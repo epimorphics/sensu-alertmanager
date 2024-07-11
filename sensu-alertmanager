@@ -164,7 +164,7 @@ def start_server(port):
 if __name__ == "__main__":
   # Initiate the parser (https://docs.python.org/3/library/argparse.html)
   parser = argparse.ArgumentParser()
-  parser.add_argument("-A", "--alertmanager", dest="alertmanager", help="Alertrmanager", action="store", default="http://alertmanager:9093/api/v1/alerts")
+  parser.add_argument("-A", "--alertmanager", dest="alertmanager", help="Alertrmanager", action="store", default="http://alertmanager:9093/api/v2/alerts")
   parser.add_argument("-t", "--timeout", dest="timeout", help="timeout", action="store", default=3, type=int)
   parser.add_argument("-p", "--port", dest="port", help="port", action="store", default=9898, type=int)
   parser.add_argument("-r", "--retries", dest="retries", help="retries", action="store", default=2, type=int)
