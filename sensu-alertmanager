@@ -168,7 +168,7 @@ if __name__ == "__main__":
   parser.add_argument("-t", "--timeout", dest="timeout", help="timeout", action="store", default=3, type=int)
   parser.add_argument("-p", "--port", dest="port", help="port", action="store", default=9898, type=int)
   parser.add_argument("-r", "--retries", dest="retries", help="retries", action="store", default=2, type=int)
-  parser.add_argument("-V", "--version", action='version', version='%(prog)s 1.0')
+  parser.add_argument("-V", "--version", action='version', version='%(prog)s 2.0')
 
   metrics = Counter("sensu_alert", "Sensu Alert Connections", ['state'])
 
