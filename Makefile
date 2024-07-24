@@ -3,10 +3,8 @@
 REPO=293385631482.dkr.ecr.eu-west-1.amazonaws.com
 STORE=epimorphics
 IMAGE=sensu-alertmanager
-VERSION?= $(shell git describe --tags)
+TAG?= $(shell git describe --tags `git rev-list --tags --max-count=1`)
 NAME?=${STORE}/${IMAGE}
-COMMIT=$(shell git rev-parse --short HEAD)
-TAG?=$(shell printf '%s_%s_%08d' ${VERSION} ${COMMIT} ${GITHUB_RUN_NUMBER})
 
 default: image
 all: publish
@@ -24,6 +22,4 @@ tag:
 vars:
 	@echo TAG:${TAG}
 	@echo NAME:${NAME}
-	@echo VERSION:${VERSION}
-	@echo COMMIT:${COMMIT}
 	@echo IMAGE:${IMAGE}
