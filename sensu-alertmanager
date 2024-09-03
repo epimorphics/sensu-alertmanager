@@ -17,14 +17,26 @@ import time
 from _thread import *
 from prometheus_client import start_http_server, Counter
 
-
-def log(msg, alert=None):
+def report(level, msg, alert=None):
   event = {}
   event['ts'] = rfc3339(time.time())
-  event['text'] = msg
+  event['level'] = level
+  event['message'] = msg
   if alert:
     event['alert'] = json.dumps(alert)
   print(json.dumps(event))
+
+def debug(msg):
+  report("debug", msg)
+
+def log(msg):
+  report("info", msg)
+
+def warn(msg, alert=None):
+  report("warn", msg, alert)
+
+def error(msg, alert=None):
+  report("error", msg, alert)
 
 def terminateProcess(signalNumber, frame):
   log('Received signal {}.'.format(signalNumber))
@@ -87,18 +99,20 @@ def post(msg, retry=0):
     log("Retry: {}".format(retry))
 
   try:
-#   log("Forwarding to {}".format(args.alertmanager), alert)
+    if (args.verbose > 0):
+      log("Forwarding to {}".format(args.alertmanager), alert)
     r = requests.post(args.alertmanager, json = alert, timeout = args.timeout)
-#   log(r.text)
+    if (args.verbose > 0):
+      log(r.text)
   except requests.Timeout:
     if (retry < args.retries):
       post(msg, retry+1)
     else:
-      log("Timeout posting to {}".format(args.alertmanager), alert)
+      warn("Timeout posting to {}".format(args.alertmanager), alert)
       metrics.labels(state='timeout').inc()
     return
   except requests.ConnectionError as e:
-    log("Failed to post to {}: {}".format(args.alertmanager, e), alert)
+    error("Failed to post to {}: {}".format(args.alertmanager, e), alert)
     metrics.labels(state='failure').inc()
     return
 
@@ -109,7 +123,8 @@ def post(msg, retry=0):
 
 
 def process(data):
-  #print("Data:{}".format(json.dumps(data)))
+  if (args.verbose > 1):
+    debug(format(json.dumps(data)))
   md = data['check']['metadata']
 
   entity_name = entity(data)
@@ -134,7 +149,7 @@ def threaded_client(connection):
     try:
       alert += frame.decode("utf-8")
     except:
-      log('Failed to decode data frame. <{}>'.format(frame))
+      error('Failed to decode data frame. <{}>'.format(frame))
       connection.close()
       metrics.labels(state='error').inc()
       return
@@ -143,20 +158,21 @@ def threaded_client(connection):
   try:
     process(json.loads(alert))
   except:
-    log('Failed to process alert:', alert)
+    error('Failed to process alert:', alert)
 
 
 def start_server(port):
   try:
     ServerSocket.bind(('0.0.0.0', port))
   except socket.error as e:
-    log(str(e))
+    error(str(e))
 
   ServerSocket.listen(5)
 
   while True:
     Client, address = ServerSocket.accept()
-#   log('Connection from : ' + address[0] + ':' + str(address[1]))
+    if (args.verbose > 0):
+      log('Connection from : ' + address[0] + ':' + str(address[1]))
     start_new_thread(threaded_client, (Client, ))
   ServerSocket.close()
 
@@ -169,6 +185,7 @@ if __name__ == "__main__":
   parser.add_argument("-p", "--port", dest="port", help="port", action="store", default=9898, type=int)
   parser.add_argument("-r", "--retries", dest="retries", help="retries", action="store", default=2, type=int)
   parser.add_argument("-V", "--version", action='version', version='%(prog)s 2.0')
+  parser.add_argument("-v", "--verbose", dest="verbose", help="Verbose (1 or 2)", action='store', default=int(os.environ.get("DEBUG", "0")), type=int)
 
   metrics = Counter("sensu_alert", "Sensu Alert Connections", ['state'])
 
