@@ -123,6 +123,7 @@ def post(msg, retry=0):
 
 
 def process(data):
+  #print("Data:{}".format(json.dumps(data)))
   md = data['check']['metadata']
 
   entity_name = entity(data)
