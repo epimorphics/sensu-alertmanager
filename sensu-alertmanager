@@ -99,11 +99,9 @@ def post(msg, retry=0):
     log("Retry: {}".format(retry))
 
   try:
-    if (args.verbose > 0):
-      log("Forwarding to {}".format(args.alertmanager), alert)
+#   log("Forwarding to {}".format(args.alertmanager), alert)
     r = requests.post(args.alertmanager, json = alert, timeout = args.timeout)
-#   if (args.verbose > 0):
-#     log(r.text)
+#   log(r.text)
   except requests.Timeout:
     if (retry < args.retries):
       post(msg, retry+1)
