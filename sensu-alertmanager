@@ -106,7 +106,7 @@ def post(msg, retry=0):
     if (retry < args.retries):
       post(msg, retry+1)
     else:
-      log("Timeout posting to {}".format(args.alertmanager), alert)
+      warn("Timeout posting to {}".format(args.alertmanager), alert)
       metrics.labels(state='timeout').inc()
     return
   except requests.ConnectionError as e:
@@ -162,13 +162,14 @@ def start_server(port):
   try:
     ServerSocket.bind(('0.0.0.0', port))
   except socket.error as e:
-    log(str(e))
+    error(str(e))
 
   ServerSocket.listen(5)
 
   while True:
     Client, address = ServerSocket.accept()
-#   log('Connection from : ' + address[0] + ':' + str(address[1]))
+    if (args.verbose > 0):
+      log('Connection from : ' + address[0] + ':' + str(address[1]))
     start_new_thread(threaded_client, (Client, ))
   ServerSocket.close()
 
