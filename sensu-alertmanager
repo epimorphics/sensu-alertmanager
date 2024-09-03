@@ -99,7 +99,8 @@ def post(msg, retry=0):
     log("Retry: {}".format(retry))
 
   try:
-#   log("Forwarding to {}".format(args.alertmanager), alert)
+    if (args.verbose > 0):
+      log("Forwarding to {}".format(args.alertmanager), alert)
     r = requests.post(args.alertmanager, json = alert, timeout = args.timeout)
 #   log(r.text)
   except requests.Timeout:
@@ -110,7 +111,7 @@ def post(msg, retry=0):
       metrics.labels(state='timeout').inc()
     return
   except requests.ConnectionError as e:
-    log("Failed to post to {}: {}".format(args.alertmanager, e), alert)
+    error("Failed to post to {}: {}".format(args.alertmanager, e), alert)
     metrics.labels(state='failure').inc()
     return
 
