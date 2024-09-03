@@ -132,11 +132,7 @@ def process(data):
   msg['labels'] = label(entity_name, data['check'])
   msg['annotations'] = annotate(entity_name, data['check'], data['entity'])
   msg['annotations']['sequence'] = str(data['sequence'])
-
-  
   if 'sensu' in msg['annotations'].keys():
-    if (args.verbose > 1):
-      debug("Host:{} Alert:{}".format(entity_name, md['name']))
     msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
 
   post(msg)
