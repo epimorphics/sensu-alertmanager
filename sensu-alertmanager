@@ -146,7 +146,7 @@ def threaded_client(connection):
     try:
       alert += frame.decode("utf-8")
     except:
-      log('Failed to decode data frame. <{}>'.format(frame))
+      error('Failed to decode data frame. <{}>'.format(frame))
       connection.close()
       metrics.labels(state='error').inc()
       return
@@ -155,7 +155,7 @@ def threaded_client(connection):
   try:
     process(json.loads(alert))
   except:
-    log('Failed to process alert:', alert)
+    error('Failed to process alert:', alert)
 
 
 def start_server(port):
@@ -168,7 +168,7 @@ def start_server(port):
 
   while True:
     Client, address = ServerSocket.accept()
-    if (args.verbose > 0):
+    if (args.verbose > 1):
       log('Connection from : ' + address[0] + ':' + str(address[1]))
     start_new_thread(threaded_client, (Client, ))
   ServerSocket.close()
