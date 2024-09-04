@@ -136,10 +136,8 @@ def process(data):
   if 'sensu' in msg['annotations'].keys():
     msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
 
-  if (args.verbose > 0):
-    log('Namespace:{} Entity:{} Check:{}'.format(md['namespace'], entity_name, md['name']))
-  
-  log("Data:{}".format(json.dumps(msg)))
+  if ((md['name'] == "keepalive") or (args.verbose > 0)):
+    log("Post:{}".format(json.dumps(msg)))
 
   post(msg)
 
