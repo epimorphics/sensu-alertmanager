@@ -122,7 +122,8 @@ def post(msg, retry=0):
 
 
 def process(data):
-  debug("Data:{}".format(json.dumps(data)))
+  if (args.verbose > 1):
+    debug("Data:{}".format(json.dumps(data)))
   md = data['check']['metadata']
 
   entity_name = entity(data)
