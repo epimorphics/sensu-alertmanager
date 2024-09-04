@@ -134,11 +134,11 @@ def process(data):
   msg['annotations'] = annotate(entity_name, data['check'], data['entity'])
   msg['annotations']['sequence'] = str(data['sequence'])
   if 'sensu' in msg['annotations'].keys():
-    if (args.verbose > 0):
-      debug("host:{} alert:{}".format(entity_name, md['name']))
     msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
 
-  log('Namespace:{} Entity:{} Check:{}'.format(md['namespace'], entity_name, md['name']))
+  if (args.verbose > 0):
+    log('Namespace:{} Entity:{} Check:{}'.format(md['namespace'], entity_name, md['name']))
+  debug("Data:{}".format(json.dumps(msg)))
 
   post(msg)
 
