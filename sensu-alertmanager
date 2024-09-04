@@ -136,6 +136,7 @@ def process(data):
     if (args.verbose > 1):
       debug("host:{} alert:{}".format(entity_name, md['name']))
     msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
+  log("Post")
 
   post(msg)
 
