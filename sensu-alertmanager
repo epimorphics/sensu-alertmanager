@@ -131,6 +131,7 @@ def process(data):
   msg['annotations'] = annotate(entity_name, data['check'], data['entity'])
   msg['annotations']['sequence'] = str(data['sequence'])
   if 'sensu' in msg['annotations'].keys():
+    msg['generator'] ='Sensu'
     msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations'].pop('sensu'), md['namespace'], entity_name, md['name'])
 
   if ((args.verbose > 0 and md['name'] != "keepalive") or (args.verbose > 1)):
