@@ -157,11 +157,10 @@ def threaded_client(connection):
       return
   connection.close()
 
-  process(json.loads(alert))
-# try:
-#   process(json.loads(alert))
-# except:
-#   error('Failed to process alert:', alert)
+  try:
+    process(json.loads(alert))
+  except:
+    error('Failed to process alert:', alert)
 
 def start_server(port):
   try:
