@@ -98,8 +98,8 @@ def post(msg, retry=0):
 
   if retry:
     log("Retry: {}".format(retry))
-  elif ((args.verbose > 0 and md['name'] != "keepalive") or (args.verbose > 1)):
-    log("Sending alert")
+  else
+    log("Sending")
 
   try:
     r = requests.post(args.alertmanager, json = alert, timeout = args.timeout)
@@ -135,6 +135,9 @@ def process(data):
   msg['annotations']['sequence'] = str(data['sequence'])
   if 'sensu' in msg['annotations'].keys():
     msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations']['sensu'], md['namespace'], entity_name, md['name'])
+
+# if ((args.verbose > 0 and md['name'] != "keepalive") or (args.verbose > 1)):
+#   log("Sending alert", )
 
   post(msg)
 
