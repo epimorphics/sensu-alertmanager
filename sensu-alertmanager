@@ -99,7 +99,7 @@ def post(msg, retry=0):
   if retry:
     log("Retry: {}".format(retry))
   else:
-    log("Sending")
+    log("Sending to {}".format(args.alertmanager), alert)
 
   try:
     r = requests.post(args.alertmanager, json = alert, timeout = args.timeout)
