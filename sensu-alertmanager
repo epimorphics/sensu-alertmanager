@@ -98,7 +98,7 @@ def post(msg, retry=0):
 
   if retry:
     log("Retry: {}".format(retry))
-  else
+  else:
     log("Sending")
 
   try:
