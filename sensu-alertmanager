@@ -173,7 +173,7 @@ def start_server(port):
 
   while True:
     Client, address = ServerSocket.accept()
-    if (args.verbose > 1):
+    if (args.verbose > 2):
       debug('Connection from : ' + address[0] + ':' + str(address[1]))
     start_new_thread(threaded_client, (Client, ))
   ServerSocket.close()
