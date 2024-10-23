@@ -123,7 +123,7 @@ def post(msg, retry=0):
 
 def process(data):
   if (args.verbose > 1):
-    debug('Alert Received', data)
+    debug('Alert Received')
   md = data['check']['metadata']
 
   entity_name = entity(data)
@@ -154,11 +154,11 @@ def threaded_client(connection):
       return
   connection.close()
 
-  try:
-    process(json.loads(alert))
-  except:
-    error('Failed to process alert:', alert)
-
+  process(json.loads(alert))
+# try:
+#   process(json.loads(alert))
+# except:
+#   error('Failed to process alert:', alert)
 
 def start_server(port):
   try:
