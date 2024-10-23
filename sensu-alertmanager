@@ -30,8 +30,8 @@ def report(level, msg, alert=None):
 def debug(msg):
   report("debug", msg)
 
-def log(msg):
-  report("info", msg)
+def log(msg, alert=None):
+  report("info", msg, alert)
 
 def warn(msg, alert=None):
   report("warn", msg, alert)
@@ -97,7 +97,9 @@ def post(msg, retry=0):
   alert.append(msg)
 
   if retry:
-    log("Retry: {}".format(retry))
+    log("Retry: {}".format(retry), alert)
+  elif ((args.verbose > 0 and md['name'] != "keepalive") or (args.verbose > 1)):
+    log("Sending alert", alert)
 
   try:
     r = requests.post(args.alertmanager, json = alert, timeout = args.timeout)
@@ -133,9 +135,6 @@ def process(data):
   msg['annotations']['sequence'] = str(data['sequence'])
   if 'sensu' in msg['annotations'].keys():
     msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations']['sensu'], md['namespace'], entity_name, md['name'])
-
-  if ((args.verbose > 0 and md['name'] != "keepalive") or (args.verbose > 1)):
-    log('Post:{}'.format(json.dumps(msg)))
 
   post(msg)
 
