@@ -3,6 +3,7 @@
 # To debug create a new sensu handler configured a tcp port 31337
 # on host the host start nc -l
 # pipe the output from this to stdin of this script.
+# or run a working version with --verbose=2 and reparse .message.Data
 
 import argparse
 import datetime
@@ -120,7 +121,7 @@ def post(msg, retry=0):
 
 def process(data):
   if (args.verbose > 1):
-    debug("Data:{}".format(json.dumps(data)))
+    debug('{"Data":{}}'.format(json.dumps(data)))
   md = data['check']['metadata']
 
   entity_name = entity(data)
@@ -134,7 +135,7 @@ def process(data):
     msg['generatorURL'] ='https://{}/c/~/n/{}/events/{}/{}'.format(msg['annotations']['sensu'], md['namespace'], entity_name, md['name'])
 
   if ((args.verbose > 0 and md['name'] != "keepalive") or (args.verbose > 1)):
-    log("Post:{}".format(json.dumps(msg)))
+    log('{"Post":{}}'.format(json.dumps(msg)))
 
   post(msg)
 
